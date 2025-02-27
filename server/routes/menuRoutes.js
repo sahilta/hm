@@ -1,52 +1,98 @@
-const express = require("express");
+import express from "express";
+import Menu from "../models/Menu.js"; // Import Mongoose model
+
 const router = express.Router();
 
-// Sample menu data (Replace with a database later)
-const menu = [
-    { id: 1, name: "Burger", price: 5.99 },
-    { id: 2, name: "Pizza", price: 9.99 },
-    { id: 3, name: "Pasta", price: 7.99 },
+// 🍽️ Sample menu data
+const sampleMenu = [
+    { name: "Burger", category: "Fast Food", price: 5.99 },
+    { name: "Pizza", category: "Fast Food", price: 9.99 },
+    { name: "Pasta", category: "Italian", price: 7.99 },
+    { name: "Sushi", category: "Japanese", price: 12.99 },
+    { name: "Salad", category: "Healthy", price: 6.49 },
 ];
 
-// 🛑 GET all menu items
-router.get("/", (req, res) => {
-    res.json(menu);
+// ✅ Function to seed sample data
+const seedMenu = async () => {
+    try {
+        const count = await Menu.countDocuments();
+        if (count === 0) {
+            await Menu.insertMany(sampleMenu);
+            console.log("✅ Sample menu items added to the database!");
+        }
+    } catch (error) {
+        console.error("⚠️ Error seeding menu:", error.message);
+    }
+};
+
+// ✅ Call the seed function on startup
+seedMenu();
+
+// ✅ GET all menu items from DB
+router.get("/", async (req, res) => {
+    try {
+        const menu = await Menu.find();
+        res.json(menu);
+    } catch (error) {
+        res.status(500).json({ message: "Server error", error: error.message });
+    }
 });
 
-// 🛑 GET a single menu item by ID
-router.get("/:id", (req, res) => {
-    const item = menu.find((m) => m.id === parseInt(req.params.id));
-    if (!item) return res.status(404).json({ message: "Item not found" });
-    res.json(item);
+// ✅ GET a single menu item by ID from DB
+router.get("/:id", async (req, res) => {
+    try {
+        const item = await Menu.findById(req.params.id);
+        if (!item) return res.status(404).json({ message: "Item not found" });
+        res.json(item);
+    } catch (error) {
+        res.status(400).json({ message: "Invalid ID format", error: error.message });
+    }
 });
 
-// 🛑 POST a new menu item
-router.post("/", (req, res) => {
-    const { name, price } = req.body;
-    if (!name || !price) return res.status(400).json({ message: "Name and price are required" });
+// ✅ POST a new menu item to DB
+router.post("/", async (req, res) => {
+    try {
+        const { name, category, price } = req.body;
+        if (!name || !category || !price) {
+            return res.status(400).json({ message: "Name, category, and price are required" });
+        }
 
-    const newItem = { id: menu.length + 1, name, price };
-    menu.push(newItem);
-    res.status(201).json(newItem);
+        const newItem = new Menu({ name, category, price });
+        await newItem.save();
+        res.status(201).json(newItem);
+    } catch (error) {
+        res.status(500).json({ message: "Error adding item", error: error.message });
+    }
 });
 
-// 🛑 PUT (Update) a menu item by ID
-router.put("/:id", (req, res) => {
-    const item = menu.find((m) => m.id === parseInt(req.params.id));
-    if (!item) return res.status(404).json({ message: "Item not found" });
+// ✅ PUT (Update) a menu item by ID in DB
+router.put("/:id", async (req, res) => {
+    try {
+        const { name, category, price } = req.body;
+        const item = await Menu.findById(req.params.id);
+        if (!item) return res.status(404).json({ message: "Item not found" });
 
-    item.name = req.body.name || item.name;
-    item.price = req.body.price || item.price;
-    res.json(item);
+        if (name) item.name = name;
+        if (category) item.category = category;
+        if (price) item.price = price;
+
+        await item.save();
+        res.json(item);
+    } catch (error) {
+        res.status(500).json({ message: "Update failed", error: error.message });
+    }
 });
 
-// 🛑 DELETE a menu item
-router.delete("/:id", (req, res) => {
-    const index = menu.findIndex((m) => m.id === parseInt(req.params.id));
-    if (index === -1) return res.status(404).json({ message: "Item not found" });
+// ✅ DELETE a menu item from DB
+router.delete("/:id", async (req, res) => {
+    try {
+        const item = await Menu.findByIdAndDelete(req.params.id);
+        if (!item) return res.status(404).json({ message: "Item not found" });
 
-    menu.splice(index, 1);
-    res.json({ message: "Item deleted successfully" });
+        res.json({ message: "Item deleted successfully" });
+    } catch (error) {
+        res.status(500).json({ message: "Delete failed", error: error.message });
+    }
 });
 
-module.exports = router;
+export default router;

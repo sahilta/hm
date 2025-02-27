@@ -6,7 +6,7 @@ import { Server } from "socket.io";
 import connectDB from "./config/db.js";
 import userRoutes from "./routes/userRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
-
+import menuRoutes from "./routes/menuRoutes.js";
 dotenv.config();
 connectDB();
 
@@ -19,6 +19,7 @@ app.use(express.json());
 
 app.use("/api/users", userRoutes);
 app.use("/api/orders", orderRoutes);
+app.use("/api/menu",menuRoutes);
 
 io.on("connection", (socket) => {
   console.log("A user connected");
